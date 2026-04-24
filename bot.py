@@ -159,6 +159,17 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS ban_logs (
+        guild_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        banned_by INTEGER,
+        reason TEXT,
+        banned_at REAL NOT NULL,
+        PRIMARY KEY (guild_id, user_id)
+         )
+     """)
+    
     con.commit()
     con.close()
 
@@ -694,6 +705,32 @@ async def on_message(message: discord.Message):
                 pass
 
     await bot.process_commands(message)
+
+@bot.event
+async def on_member_ban(guild, user):
+    try:
+        async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
+            if entry.target.id == user.id:
+                banned_by = entry.user.id
+                reason = entry.reason or "Sebep yok"
+
+                con = db()
+                cur = con.cursor()
+                cur.execute("""
+                    INSERT OR REPLACE INTO ban_logs (guild_id, user_id, banned_by, reason, banned_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (guild.id, user.id, banned_by, reason, time.time()))
+                con.commit()
+                con.close()
+
+                log_channel = find_text_channel(guild, "log")
+                if log_channel:
+                    await log_channel.send(
+                        f"🔨 **BAN**\nKullanıcı: <@{user.id}>\nYetkili: <@{banned_by}>\nSebep: {reason}"
+                    )
+                break
+    except Exception as e:
+        print("Ban log hatası:", e)
 
 # =========================================================
 # /PING
