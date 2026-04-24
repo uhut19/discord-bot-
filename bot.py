@@ -483,7 +483,88 @@ async def apply_level_reward_roles(member: discord.Member, level: int):
             await member.add_roles(*to_add, reason="Seviye ödül rolü")
         except Exception as e:
             print("Seviye rolü verilemedi:", e)
+# =========================================================
+# AKILLI MODERASYON SİSTEMİ
+# =========================================================
 
+BLOCKED_LINK_WORDS = [
+    "discord.gg",
+    "discord.com/invite",
+    "www.",
+    "http://",
+    "https://",
+    ".com",
+    ".net",
+    ".org",
+    ".gg"
+]
+
+SPAM_LIMIT = 5
+SPAM_SECONDS = 5
+CAPS_MIN_LENGTH = 12
+CAPS_PERCENT = 0.70
+
+message_cache = {}
+
+
+async def handle_moderation(message: discord.Message):
+    user_id = message.author.id
+    now = time.time()
+    content = message.content
+    content_lower = content.lower()
+
+    # SPAM KONTROL
+    if user_id not in message_cache:
+        message_cache[user_id] = []
+
+    message_cache[user_id] = [
+        t for t in message_cache[user_id]
+        if now - t < SPAM_SECONDS
+    ]
+    message_cache[user_id].append(now)
+
+    if len(message_cache[user_id]) >= SPAM_LIMIT:
+        try:
+            await message.delete()
+            await message.author.timeout(timedelta(minutes=2), reason="Spam")
+            await message.channel.send(
+                f"{message.author.mention} spam yapma 🚫 2 dakika susturuldun.",
+                delete_after=7
+            )
+        except Exception as e:
+            print("Spam moderasyon hatası:", e)
+        return True
+
+    # LİNK / REKLAM KONTROL
+    if any(word in content_lower for word in BLOCKED_LINK_WORDS):
+        try:
+            await message.delete()
+            await message.author.timeout(timedelta(minutes=3), reason="Reklam / link")
+            await message.channel.send(
+                f"{message.author.mention} link/reklam yasak 🚫 3 dakika susturuldun.",
+                delete_after=7
+            )
+        except Exception as e:
+            print("Link moderasyon hatası:", e)
+        return True
+
+    # CAPS LOCK KONTROL
+    if len(content) >= CAPS_MIN_LENGTH:
+        letters = [c for c in content if c.isalpha()]
+        if letters:
+            upper_count = sum(1 for c in letters if c.isupper())
+            if upper_count / len(letters) >= CAPS_PERCENT:
+                try:
+                    await message.delete()
+                    await message.channel.send(
+                        f"{message.author.mention} büyük harfle yazma 😅",
+                        delete_after=7
+                    )
+                except Exception as e:
+                    print("Caps moderasyon hatası:", e)
+                return True
+
+    return False
 # =========================================================
 # OYUN ROL BUTONLARI
 # =========================================================
@@ -682,13 +763,20 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    if not isinstance(message.author, discord.Member):
+        if not isinstance(message.author, discord.Member):
         await bot.process_commands(message)
         return
 
     protected_roles = {"👑 Founder", "⚡ Co-Owner", "🛠️ Admin", "🛡️ Moderation Team"}
     content = message.content.lower()
 
+    # AKILLI MODERASYON
+    if not any(role.name in protected_roles for role in message.author.roles):
+        blocked = await handle_moderation(message)
+        if blocked:
+            return
+
+    # KÜFÜR SİSTEMİ
     if not any(role.name in protected_roles for role in message.author.roles):
         if any(word in content for word in BAD_WORDS):
             count = increase_swear_count(message.guild.id, message.author.id)
