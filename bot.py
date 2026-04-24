@@ -845,7 +845,101 @@ async def panel(interaction: discord.Interaction):
     embed.add_field(name="🔨 Banlı Kullanıcılar", value="\n".join(ban_lines)[:1024], inline=False)
 
     await interaction.user.send(embed=embed)
+# =========================================================
+# /PANEL
+# =========================================================
+@bot.tree.command(name="panel", description="Founder özel yönetim paneli", guild=discord.Object(id=GUILD_ID))
+async def panel(interaction: discord.Interaction):
+    if interaction.user.id != OWNER_USER_ID:
+        await interaction.response.send_message("Bu panel sadece Founder içindir.", ephemeral=True)
+        return
 
+    if not interaction.guild:
+        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
+        return
+
+    await interaction.response.send_message("Panel özelden gönderildi.", ephemeral=True)
+
+    guild = interaction.guild
+
+    # Küfür kayıtları
+    con = db()
+    cur = con.cursor()
+    cur.execute("""
+        SELECT user_id, count
+        FROM swear_counts
+        WHERE guild_id=?
+        ORDER BY count DESC
+        LIMIT 20
+    """, (guild.id,))
+    swear_rows = cur.fetchall()
+
+    # Ban kayıtları
+    cur.execute("""
+        SELECT user_id, banned_by, reason
+        FROM ban_logs
+        WHERE guild_id=?
+        ORDER BY banned_at DESC
+        LIMIT 20
+    """, (guild.id,))
+    ban_rows = cur.fetchall()
+    con.close()
+
+    swear_lines = []
+    if swear_rows:
+        for user_id, count in swear_rows:
+            member = guild.get_member(user_id)
+            name = member.name if member else f"ID: {user_id}"
+            swear_lines.append(f"• {name} — {count} küfür")
+    else:
+        swear_lines.append("Küfür kaydı yok.")
+
+    ban_lines = []
+    if ban_rows:
+        for user_id, banned_by, reason in ban_rows:
+            user_name = f"<@{user_id}>"
+            admin_name = f"<@{banned_by}>" if banned_by else "Bilinmiyor"
+            ban_lines.append(f"• {user_name} | Yetkili: {admin_name} | Sebep: {reason}")
+    else:
+        ban_lines.append("Ban kaydı yok.")
+
+    embed = discord.Embed(
+        title="🛡️ Zental Founder Panel",
+        description=f"Sunucu: **{guild.name}**",
+        color=discord.Color.dark_red()
+    )
+
+    embed.add_field(name="🤬 Küfür Kayıtları", value="\n".join(swear_lines)[:1024], inline=False)
+    embed.add_field(name="🔨 Ban Kayıtları", value="\n".join(ban_lines)[:1024], inline=False)
+
+    await interaction.user.send(embed=embed)
+
+
+# =========================================================
+# /BANAC
+# =========================================================
+@bot.tree.command(name="banac", description="Ban kaldır (sadece Founder)", guild=discord.Object(id=GUILD_ID))
+async def banac(interaction: discord.Interaction, user_id: str):
+    if interaction.user.id != OWNER_USER_ID:
+        await interaction.response.send_message("Bu komutu sadece Founder kullanabilir.", ephemeral=True)
+        return
+
+    guild = interaction.guild
+
+    try:
+        user = await bot.fetch_user(int(user_id))
+        await guild.unban(user)
+
+        log_channel = find_text_channel(guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🔓 **BAN AÇILDI**\nKullanıcı: <@{user_id}>\nAçan: {interaction.user.mention}"
+            )
+
+        await interaction.response.send_message(f"{user} kullanıcısının banı açıldı.", ephemeral=True)
+
+    except Exception as e:
+        await interaction.response.send_message(f"Hata: {e}", ephemeral=True)
 # =========================================================
 # /ROLPANEL
 # =========================================================
@@ -1050,7 +1144,20 @@ async def kur(interaction: discord.Interaction):
         await get_or_create_voice_channel(guild, community_cat, "Genel 1")
         await get_or_create_voice_channel(guild, community_cat, "Genel 2")
         await get_or_create_voice_channel(guild, community_cat, "Chill 1")
-        await get_or_create_voice_channel(guild, community_cat, "Chill 2")
+        await get_or_create_voice_channel(guild, community_cat, "Chill 2")       
+        await get_or_create_text_channel(
+            guild,
+            support_cat,
+            "log",
+            overwrites={
+                everyone: discord.PermissionOverwrite(view_channel=False),
+                founder_role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+                co_owner_role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+                admin_role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+                mod_role: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+            },
+            topic="Ban, küfür ve moderasyon logları"
+        )
 
         await get_or_create_text_channel(guild, support_cat, "istek", topic="İstekler")
         await get_or_create_text_channel(guild, support_cat, "oneri", topic="Öneriler")
