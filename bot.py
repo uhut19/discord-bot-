@@ -1569,7 +1569,62 @@ async def rolpanel(interaction: discord.Interaction):
     await interaction.channel.send("Oyun rollerini almak için butonlara bas:", view=GameRoleView1())
     await interaction.channel.send("Devam:", view=GameRoleView2())
     await interaction.response.send_message("Rol paneli gönderildi.", ephemeral=True)
+    
+@bot.tree.command(name="guncelle", description="Kurallar ve sabit metinleri günceller", guild=discord.Object(id=GUILD_ID))
+async def guncelle(interaction: discord.Interaction):
+    if interaction.user.id != OWNER_USER_ID:
+        await interaction.response.send_message("Bu komutu sadece Founder kullanabilir.", ephemeral=True)
+        return
 
+    if not interaction.guild:
+        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    kurallar = find_text_channel(interaction.guild, "kurallar")
+    if not kurallar:
+        await interaction.followup.send("kurallar kanalı bulunamadı.", ephemeral=True)
+        return
+
+    try:
+        async for msg in kurallar.history(limit=20):
+            if msg.author == interaction.guild.me:
+                await msg.delete()
+
+        await kurallar.send(
+            "📜 **ZENTAL SUNUCU KURALLARI**\n\n"
+            "1️⃣ **Saygı zorunludur.**\n"
+            "Herkese karşı seviyeli konuş. Hakaret, aşağılama ve kışkırtma yasaktır.\n\n"
+            "2️⃣ **Küfür ve ağır argo yasaktır.**\n"
+            "Küfür sistemi aktiftir. Tekrarlayan ihlaller timeout veya ban ile sonuçlanır.\n\n"
+            "3️⃣ **Ailevi değerlere küfür kesinlikle yasaktır.**\n"
+            "Anne, baba, aile, dinî veya millî değerlere hakaret ağır ihlal sayılır.\n\n"
+            "4️⃣ **+18 içerik yasaktır.**\n"
+            "Cinsel içerik, uygunsuz görsel, video, bağlantı veya ima paylaşmak yasaktır.\n\n"
+            "5️⃣ **Siyaset ve tartışmalı gündem yasaktır.**\n"
+            "Siyasi tartışma, propaganda veya kışkırtıcı gündem konuşmaları yasaktır.\n\n"
+            "6️⃣ **Spam, flood ve CAPS yasaktır.**\n"
+            "Arka arkaya mesaj atmak, gereksiz etiketlemek ve tamamen büyük harfle yazmak yasaktır.\n\n"
+            "7️⃣ **Reklam ve link paylaşımı yasaktır.**\n"
+            "Discord davet linki, site reklamı, satış linki veya izinsiz tanıtım yasaktır.\n\n"
+            "8️⃣ **Warn sistemi aktiftir.**\n"
+            "• 3 warn = 30 dakika susturma\n"
+            "• 5 warn = ban\n\n"
+            "9️⃣ **Komutlar:**\n"
+            "• `/komut` → Yetkine göre kullanabileceğin komutları gösterir\n"
+            "• `/rank` → seviyeni gösterir\n"
+            "• `/leaderboard` → seviye sıralaması\n"
+            "• `!warn @kişi sebep` → uyarı verir\n"
+            "• `!mute @kişi dakika sebep` → susturur\n"
+            "• `!temizle sayı` → mesaj temizler\n\n"
+            "⚠️ Sunucuda bulunman, bu kuralları kabul ettiğin anlamına gelir."
+        )
+
+        await interaction.followup.send("Kurallar güncellendi.", ephemeral=True)
+
+    except Exception as e:
+        await interaction.followup.send(f"Güncelleme hatası: {e}", ephemeral=True)
 # =========================================================
 # /KUR
 # =========================================================
