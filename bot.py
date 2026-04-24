@@ -615,7 +615,7 @@ async def on_member_join(member: discord.Member):
 # =========================================================
 @bot.event
 async def on_presence_update(before: discord.Member, after: discord.Member):
-    if not after.guild:
+    if not after.guild or after.bot:
         return
 
     for activity in after.activities:
@@ -630,9 +630,37 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         role = find_role(after.guild, game["role"])
         if role and role not in after.roles:
             try:
-                await after.add_roles(role, reason="Oyun durumu algılandı")
+                await after.add_roles(role, reason="Popüler oyun algılandı")
             except Exception as e:
-                print("Presence rol hatası:", e)
+                print("Oyun rol hatası:", e)
+
+        category = await get_or_create_category(after.guild, game["category"])
+
+        await get_or_create_text_channel(
+            after.guild,
+            category,
+            f"{game['slug']}-sohbet",
+            topic=f"{game['display']} sohbet kanalı"
+        )
+
+        await get_or_create_text_channel(
+            after.guild,
+            category,
+            f"{game['slug']}-takim-ara",
+            topic=f"{game['display']} takım arkadaşı bulma"
+        )
+
+        for i in range(1, 9):
+            await get_or_create_voice_channel(after.guild, category, f"{game['display']} {i}")
+
+        log_channel = find_text_channel(after.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🎮 **POPÜLER OYUN ALGILANDI**\n"
+                f"Kullanıcı: {after.mention}\n"
+                f"Oyun: **{game['display']}**\n"
+                f"Rol ve oyun odaları kontrol edildi."
+            )
 
 # =========================================================
 # MESAJ: KÜFÜR + XP
