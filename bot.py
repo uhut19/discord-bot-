@@ -776,6 +776,7 @@ async def setup_views():
     bot.add_view(TicketView())
     bot.add_view(TicketCloseView())
     bot.add_view(RegisterView())
+    bot.add_view(EventJoinView("persistent_event"))
 
 
 @bot.event
@@ -1552,6 +1553,88 @@ async def kayitpanel(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed, view=RegisterView())
     await interaction.response.send_message("Kayıt paneli gönderildi.", ephemeral=True)
+# =========================================================
+# ETKİNLİK SİSTEMİ
+# =========================================================
+
+event_participants = {}
+
+
+class EventJoinView(discord.ui.View):
+    def __init__(self, event_key: str):
+        super().__init__(timeout=None)
+        self.event_key = event_key
+
+    @discord.ui.button(label="✅ Katıl", style=discord.ButtonStyle.success)
+    async def join_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        event_participants.setdefault(self.event_key, set())
+        event_participants[self.event_key].add(interaction.user.id)
+
+        await interaction.response.send_message("Etkinliğe katıldın ✅", ephemeral=True)
+
+    @discord.ui.button(label="❌ Ayrıl", style=discord.ButtonStyle.danger)
+    async def leave_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        event_participants.setdefault(self.event_key, set())
+        event_participants[self.event_key].discard(interaction.user.id)
+
+        await interaction.response.send_message("Etkinlikten ayrıldın ❌", ephemeral=True)
+
+    @discord.ui.button(label="👥 Katılanlar", style=discord.ButtonStyle.secondary)
+    async def list_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        users = event_participants.get(self.event_key, set())
+
+        if not users:
+            await interaction.response.send_message("Henüz katılan yok.", ephemeral=True)
+            return
+
+        mentions = [f"<@{user_id}>" for user_id in users]
+        await interaction.response.send_message(
+            "👥 **Katılanlar:**\n" + "\n".join(mentions),
+            ephemeral=True
+        )
+
+
+@bot.tree.command(name="eolustur", description="Etkinlik oluşturur", guild=discord.Object(id=GUILD_ID))
+async def eolustur(
+    interaction: discord.Interaction,
+    baslik: str,
+    tarih: str,
+    saat: str,
+    aciklama: str
+):
+    if not interaction.guild or not isinstance(interaction.user, discord.Member):
+        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
+        return
+
+    if not is_staff(interaction.user):
+        await interaction.response.send_message("Bu komutu sadece yetkililer kullanabilir.", ephemeral=True)
+        return
+
+    channel = find_text_channel(interaction.guild, "etkinlik-duyuru")
+
+    if not channel:
+        await interaction.response.send_message(
+            "`etkinlik-duyuru` kanalı bulunamadı. Önce bu kanalı oluştur.",
+            ephemeral=True
+        )
+        return
+
+    event_key = f"{interaction.guild.id}-{int(time.time())}"
+    event_participants[event_key] = set()
+
+    embed = discord.Embed(
+        title=f"🎉 {baslik}",
+        description=aciklama,
+        color=discord.Color.green()
+    )
+
+    embed.add_field(name="📅 Tarih", value=tarih, inline=True)
+    embed.add_field(name="⏰ Saat", value=saat, inline=True)
+    embed.add_field(name="👤 Oluşturan", value=interaction.user.mention, inline=False)
+    embed.set_footer(text="Katılmak için aşağıdaki butona bas.")
+
+    await channel.send(embed=embed, view=EventJoinView(event_key))
+    await interaction.response.send_message("Etkinlik duyurusu gönderildi ✅", ephemeral=True)
 # =========================================================
 # /ROLPANEL
 # =========================================================
