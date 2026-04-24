@@ -703,13 +703,34 @@ async def on_member_join(member: discord.Member):
             pass
 
 # =========================================================
-# OYUN DURUMU ALGILAMA
+# OYUN DURUMU + YAYIN TAKİP SİSTEMİ
 # =========================================================
 @bot.event
 async def on_presence_update(before: discord.Member, after: discord.Member):
     if not after.guild or after.bot:
         return
 
+    # =========================
+    # YAYIN TAKİP SİSTEMİ
+    # =========================
+    streamer_role = find_role(after.guild, "🔴 Streamer")
+
+    if streamer_role and streamer_role in after.roles:
+        for activity in after.activities:
+            if isinstance(activity, discord.Streaming):
+                channel = find_text_channel(after.guild, "yayin-duyuru")
+
+                if channel:
+                    await channel.send(
+                        f"🔴 **YAYIN BAŞLADI!**\n"
+                        f"{after.mention} şimdi canlı yayında!\n"
+                        f"🔗 İzle: {activity.url}"
+                    )
+                break
+
+    # =========================
+    # POPÜLER OYUN ALGILAMA
+    # =========================
     for activity in after.activities:
         activity_name = getattr(activity, "name", None)
         if not activity_name:
@@ -743,7 +764,11 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
         )
 
         for i in range(1, 9):
-            await get_or_create_voice_channel(after.guild, category, f"{game['display']} {i}")
+            await get_or_create_voice_channel(
+                after.guild,
+                category,
+                f"{game['display']} {i}"
+            )
 
         log_channel = find_text_channel(after.guild, "log")
         if log_channel:
@@ -754,6 +779,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
                 f"Rol ve oyun odaları kontrol edildi."
             )
 
+        break
 # =========================================================
 # MESAJ: KÜFÜR + XP + AKILLI MODERASYON
 # =========================================================
