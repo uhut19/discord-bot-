@@ -761,6 +761,8 @@ class GameRoleView2(discord.ui.View):
 async def setup_views():
     bot.add_view(GameRoleView1())
     bot.add_view(GameRoleView2())
+    bot.add_view(TicketView())
+    bot.add_view(TicketCloseView())
 
 
 @bot.event
@@ -1325,6 +1327,105 @@ async def warn(ctx, member: discord.Member, *, reason="Sebep yok"):
         pass
 
     await ctx.send(f"{member.mention} uyarıldı. Sebep: {reason}")
+# =========================================================
+# TICKET SİSTEMİ
+# =========================================================
+class TicketView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="🎫 Ticket Aç", style=discord.ButtonStyle.primary, custom_id="open_ticket")
+    async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message("Bu işlem sadece sunucuda çalışır.", ephemeral=True)
+            return
+
+        guild = interaction.guild
+        user = interaction.user
+
+        ticket_name = f"ticket-{user.name}".lower().replace(" ", "-")
+
+        existing = discord.utils.get(guild.text_channels, name=ticket_name)
+        if existing:
+            await interaction.response.send_message(f"Zaten açık ticketın var: {existing.mention}", ephemeral=True)
+            return
+
+        support_cat = find_category(guild, "🛠️ DESTEK")
+        if not support_cat:
+            support_cat = await get_or_create_category(guild, "🛠️ DESTEK")
+
+        founder_role = find_role(guild, "👑 Founder")
+        admin_role = find_role(guild, "🛠️ Admin")
+        mod_role = find_role(guild, "🛡️ Moderation Team")
+        everyone = guild.default_role
+
+        overwrites = {
+            everyone: discord.PermissionOverwrite(view_channel=False),
+            user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
+        }
+
+        for role in [founder_role, admin_role, mod_role]:
+            if role:
+                overwrites[role] = discord.PermissionOverwrite(
+                    view_channel=True,
+                    send_messages=True,
+                    read_message_history=True
+                )
+
+        channel = await guild.create_text_channel(
+            ticket_name,
+            category=support_cat,
+            overwrites=overwrites,
+            reason="Ticket açıldı"
+        )
+
+        await channel.send(
+            f"🎫 {user.mention} ticket açtı.\nYetkililer kısa sürede ilgilenecek.",
+            view=TicketCloseView()
+        )
+
+        await interaction.response.send_message(f"Ticket açıldı: {channel.mention}", ephemeral=True)
+
+
+class TicketCloseView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="🔒 Ticket Kapat", style=discord.ButtonStyle.danger, custom_id="close_ticket")
+    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message("Bu işlem sadece sunucuda çalışır.", ephemeral=True)
+            return
+
+        if not (
+            is_staff(interaction.user)
+            or interaction.channel.name.startswith(f"ticket-{interaction.user.name}".lower().replace(" ", "-"))
+        ):
+            await interaction.response.send_message("Bu ticketı kapatma yetkin yok.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("Ticket 5 saniye içinde kapatılıyor.", ephemeral=True)
+        await interaction.channel.delete(reason=f"Ticket kapatıldı: {interaction.user}")
+
+
+@bot.tree.command(name="ticketpanel", description="Ticket panelini gönderir", guild=discord.Object(id=GUILD_ID))
+async def ticketpanel(interaction: discord.Interaction):
+    if not interaction.guild or not isinstance(interaction.user, discord.Member):
+        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
+        return
+
+    if not is_staff(interaction.user):
+        await interaction.response.send_message("Bu komutu sadece yetkililer kullanabilir.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🎫 Destek Sistemi",
+        description="Destek almak için aşağıdaki butona bas.",
+        color=discord.Color.blurple()
+    )
+
+    await interaction.channel.send(embed=embed, view=TicketView())
+    await interaction.response.send_message("Ticket paneli gönderildi.", ephemeral=True)
 # =========================================================
 # /ROLPANEL
 # =========================================================
