@@ -2,8 +2,6 @@ import os
 import time
 import random
 import sqlite3
-import asyncio
-import yt_dlp
 from datetime import timedelta
 
 import discord
@@ -131,21 +129,6 @@ intents.presences = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ⬇️ BURAYA EKLE
-YDL_OPTIONS = {
-    "format": "bestaudio/best",
-    "noplaylist": True,
-    "quiet": True,
-    "default_search": "ytsearch",
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android", "web"]
-        }
-    }
-}
-FFMPEG_OPTIONS = {
-    "options": "-vn"
-}
 # =========================================================
 # DATABASE
 # =========================================================
@@ -1080,87 +1063,6 @@ async def kur(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"Beklenmeyen hata: {e}", ephemeral=True)
         print("Kurulum hatası:", e)
-    
-async def auto_disconnect(ctx):
-    await asyncio.sleep(180)
-
-    if ctx.voice_client and not ctx.voice_client.is_playing():
-        await ctx.voice_client.disconnect()
-        await ctx.send("⏹️ 3 dakika boş kaldı, kanaldan çıktım.")
-
-
-@bot.command(name="join")
-async def join(ctx):
-    if not ctx.author.voice:
-        await ctx.send("Önce bir ses kanalına gir kanka.")
-        return
-
-    channel = ctx.author.voice.channel
-
-    if ctx.voice_client:
-        await ctx.voice_client.move_to(channel)
-    else:
-        await channel.connect()
-
-    await ctx.send(f"🎧 Ses kanalına geldim: **{channel.name}**")
-
-
-@bot.command(name="leave")
-async def leave(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("👋 Ses kanalından çıktım.")
-    else:
-        await ctx.send("Zaten ses kanalında değilim.")
-
-
-@bot.command(name="play")
-async def play(ctx, *, query: str):
-    if not ctx.author.voice:
-        await ctx.send("Önce bir ses kanalına gir kanka.")
-        return
-
-    if not ctx.voice_client:
-        await ctx.author.voice.channel.connect()
-
-    await ctx.send("🔎 Şarkı aranıyor...")
-
-    loop = asyncio.get_event_loop()
-
-    try:
-        with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-            info = await loop.run_in_executor(
-                None,
-                lambda: ydl.extract_info(f"ytsearch:{query}", download=False)
-            )
-
-        if "entries" in info:
-            info = info["entries"][0]
-
-        url = info["url"]
-        title = info.get("title", "Bilinmeyen şarkı")
-
-        if ctx.voice_client.is_playing():
-            ctx.voice_client.stop()
-
-        source = discord.FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
-        ctx.voice_client.play(source)
-        bot.loop.create_task(auto_disconnect(ctx))
-
-        await ctx.send(f"▶️ Çalıyor: **{title}**")
-
-    except Exception as e:
-        await ctx.send(f"❌ Müzik çalarken hata oluştu: `{e}`")
-
-
-@bot.command(name="stop")
-async def stop(ctx):
-    if ctx.voice_client and ctx.voice_client.is_playing():
-        ctx.voice_client.stop()
-        bot.loop.create_task(auto_disconnect(ctx))
-        await ctx.send("⏹️ Müzik durduruldu.")
-    else:
-        await ctx.send("Şu an çalan müzik yok.")  
 # =========================================================
 # BAŞLAT
 # =========================================================
