@@ -3,6 +3,7 @@ import time
 import random
 import sqlite3
 import asyncio
+import shutil
 from datetime import datetime
 from datetime import timedelta
 
@@ -630,6 +631,30 @@ async def weekly_game_task():
         await asyncio.sleep(300)
     
 # =========================================================
+# OTOMATİK VERİTABANI YEDEK SİSTEMİ
+# =========================================================
+
+backup_task_started = False
+
+async def backup_db_task():
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+        try:
+            if os.path.exists(DB_FILE):
+                os.makedirs("backups", exist_ok=True)
+
+                now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                backup_name = f"backups/zental_backup_{now}.db"
+
+                shutil.copy2(DB_FILE, backup_name)
+                print(f"DB yedeği alındı: {backup_name}")
+
+        except Exception as e:
+            print("DB yedek hatası:", e)
+
+        await asyncio.sleep(6 * 60 * 60)  # 6 saatte bir yedek
+# =========================================================
 # YAYIN VE OYUN SPAM KORUMA VERİLERİ
 # =========================================================
 active_streams = set()
@@ -741,9 +766,14 @@ async def on_ready():
     init_db()
 
     global weekly_game_task_started
-    if not weekly_game_task_started:
-        bot.loop.create_task(weekly_game_task())
-        weekly_game_task_started = True
+if not weekly_game_task_started:
+    bot.loop.create_task(weekly_game_task())
+    weekly_game_task_started = True
+
+global backup_task_started
+if not backup_task_started:
+    bot.loop.create_task(backup_db_task())
+    backup_task_started = True
 
     await setup_views()
 
