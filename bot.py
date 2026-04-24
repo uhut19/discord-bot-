@@ -1836,11 +1836,50 @@ async def kur(interaction: discord.Interaction):
                 history = [m async for m in kurallar.history(limit=1)]
                 if not history:
                     await kurallar.send(
-                        "• Saygılı ol\n"
-                        "• Küfür etmek yasaktır\n"
-                        "• Spam yasaktır\n"
-                        "• Reklam yasaktır\n"
-                        "• Kural ihlallerini #rapor kanalına bildir"
+    "📜 **ZENTAL SUNUCU KURALLARI**\n\n"
+    "1️⃣ **Saygı zorunludur.**\n"
+    "Herkese karşı seviyeli konuş. Hakaret, aşağılama, kışkırtma yasaktır.\n\n"
+
+    "2️⃣ **Küfür ve ağır argo yasaktır.**\n"
+    "Küfür sistemi aktiftir. Tekrarlayan ihlaller timeout veya ban ile sonuçlanır.\n\n"
+
+    "3️⃣ **Ailevi değerlere küfür kesinlikle yasaktır.**\n"
+    "Anne, baba, aile, dinî veya millî değerlere hakaret ağır ihlal sayılır.\n\n"
+
+    "4️⃣ **+18 içerik yasaktır.**\n"
+    "Cinsel içerik, uygunsuz görsel, video, bağlantı veya ima paylaşmak yasaktır.\n\n"
+
+    "5️⃣ **Siyaset ve tartışmalı gündem yasaktır.**\n"
+    "Siyasi tartışma, propaganda, parti/ideoloji kavgası ve kışkırtıcı gündem konuşmaları yasaktır.\n\n"
+
+    "6️⃣ **Spam, flood ve CAPS yasaktır.**\n"
+    "Arka arkaya mesaj atmak, gereksiz etiketlemek ve tamamen büyük harfle yazmak moderasyon sistemine takılır.\n\n"
+
+    "7️⃣ **Reklam ve link paylaşımı yasaktır.**\n"
+    "Discord davet linki, site reklamı, satış linki veya izinsiz tanıtım paylaşmak yasaktır.\n\n"
+
+    "8️⃣ **Ses kanallarında rahatsızlık vermek yasaktır.**\n"
+    "Bağırmak, troll ses açmak, müzik basmak, odalara girip çıkmak yasaktır.\n\n"
+
+    "9️⃣ **Yetkililere saygı göster.**\n"
+    "Moderasyon kararlarına itirazın varsa #destek veya #rapor kanalından düzgün şekilde bildir.\n\n"
+
+    "🔟 **Warn sistemi aktiftir.**\n"
+    "Yetkililer `!warn @kişi sebep` komutuyla uyarı verebilir.\n"
+    "• 3 warn = 30 dakika susturma\n"
+    "• 5 warn = ban\n\n"
+
+    "🛠️ **Kullanılabilecek bazı komutlar:**\n"
+    "• `/komut` → Yetkine göre kullanabileceğin komutları gösterir\n"
+    "• `/rank` → seviyeni gösterir\n"
+    "• `/leaderboard` → seviye sıralaması\n"
+    "• `!warn @kişi sebep` → uyarı verir\n"
+    "• `!mute @kişi dakika sebep` → susturur\n"
+    "• `!temizle sayı` → mesaj temizler\n"
+    "• `/panel` → Founder yönetim paneli\n\n"
+
+    "⚠️ **Sunucuda bulunman, bu kuralları kabul ettiğin anlamına gelir.**"
+)
                     )
             except Exception:
                 pass
