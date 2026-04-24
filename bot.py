@@ -508,6 +508,8 @@ CAPS_PERCENT = 0.70
 
 message_cache = {}
 
+weekly_game_task_started = False
+
 
 async def handle_moderation(message: discord.Message):
     user_id = message.author.id
@@ -733,9 +735,16 @@ async def setup_views():
     bot.add_view(GameRoleView1())
     bot.add_view(GameRoleView2())
 
+
 @bot.event
 async def on_ready():
     init_db()
+
+    global weekly_game_task_started
+    if not weekly_game_task_started:
+        bot.loop.create_task(weekly_game_task())
+        weekly_game_task_started = True
+
     await setup_views()
 
     print(f"BOT DISCORD'A BAĞLANDI: {bot.user}")
