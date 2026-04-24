@@ -775,6 +775,7 @@ async def setup_views():
     bot.add_view(GameRoleView2())
     bot.add_view(TicketView())
     bot.add_view(TicketCloseView())
+    bot.add_view(RegisterView())
 
 
 @bot.event
@@ -813,19 +814,22 @@ async def on_ready():
 @bot.event
 async def on_member_join(member: discord.Member):
     member_role = find_role(member.guild, "👤 Member")
-    if member_role:
+    kayitsiz_role = find_role(member.guild, "❌ Kayıtsız")
+
+    # önce kayıtsız ver
+    if kayitsiz_role:
         try:
-            await member.add_roles(member_role, reason="Otomatik üye rolü")
-        except Exception:
+            await member.add_roles(kayitsiz_role)
+        except:
             pass
 
+    # hoşgeldin mesajı
     genel = find_text_channel(member.guild, "hoş-geldin")
     if genel:
         try:
             await genel.send(f"Gemiye biri bindi {member.mention} 🔥")
-        except Exception:
+        except:
             pass
-
 # =========================================================
 # OYUN DURUMU + YAYIN TAKİP SİSTEMİ
 # =========================================================
@@ -1504,6 +1508,50 @@ async def ticketpanel(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed, view=TicketView())
     await interaction.response.send_message("Ticket paneli gönderildi.", ephemeral=True)
+# =========================================================
+# KAYIT SİSTEMİ
+# =========================================================
+
+class RegisterView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="✅ Kayıt Ol", style=discord.ButtonStyle.success, custom_id="register_btn")
+    async def register(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.guild or not isinstance(interaction.user, discord.Member):
+            await interaction.response.send_message("Sunucuda kullan.", ephemeral=True)
+            return
+
+        member_role = find_role(interaction.guild, "👤 Member")
+        kayitsiz_role = find_role(interaction.guild, "❌ Kayıtsız")
+
+        try:
+            if member_role:
+                await interaction.user.add_roles(member_role)
+
+            if kayitsiz_role and kayitsiz_role in interaction.user.roles:
+                await interaction.user.remove_roles(kayitsiz_role)
+
+            await interaction.response.send_message("Kayıt tamamlandı 🎉", ephemeral=True)
+
+        except Exception as e:
+            await interaction.response.send_message(f"Hata: {e}", ephemeral=True)
+
+
+@bot.tree.command(name="kayitpanel", description="Kayıt panelini gönderir", guild=discord.Object(id=GUILD_ID))
+async def kayitpanel(interaction: discord.Interaction):
+    if not is_staff(interaction.user):
+        await interaction.response.send_message("Yetkin yok.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="📥 Sunucuya Hoşgeldin",
+        description="Kayıt olmak için aşağıdaki butona bas.",
+        color=discord.Color.green()
+    )
+
+    await interaction.channel.send(embed=embed, view=RegisterView())
+    await interaction.response.send_message("Kayıt paneli gönderildi.", ephemeral=True)
 # =========================================================
 # /ROLPANEL
 # =========================================================
