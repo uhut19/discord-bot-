@@ -953,6 +953,65 @@ async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("pong")
 
 # =========================================================
+# /KOMUT
+# =========================================================
+@bot.tree.command(name="komut", description="Yetkine göre kullanabileceğin komutları gösterir", guild=discord.Object(id=GUILD_ID))
+async def komut(interaction: discord.Interaction):
+    if not interaction.guild or not isinstance(interaction.user, discord.Member):
+        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
+        return
+
+    member = interaction.user
+    role_names = {role.name for role in member.roles}
+
+    is_founder = member.id == OWNER_USER_ID or "👑 Founder" in role_names
+    is_admin = member.guild_permissions.administrator or "🛠️ Admin" in role_names or "⚡ Co-Owner" in role_names
+    is_mod = "🛡️ Moderation Team" in role_names
+
+    genel_komutlar = [
+        "`/ping` — Bot çalışıyor mu kontrol eder",
+        "`/rank` — Kendi seviyeni gösterir",
+        "`/leaderboard` — Seviye sıralamasını gösterir",
+    ]
+
+    mod_komutlar = [
+        "`!warn @kişi sebep` — Kullanıcı uyarır",
+        "`!mute @kişi 10 sebep` — Kullanıcıyı susturur",
+        "`!unmute @kişi` — Susturmayı kaldırır",
+        "`!temizle 20` — Mesaj temizler",
+    ]
+
+    admin_komutlar = [
+        "`!kick @kişi sebep` — Kullanıcıyı sunucudan atar",
+        "`!ban @kişi sebep` — Kullanıcıyı banlar",
+        "`/rolpanel` — Oyun rol panelini gönderir",
+    ]
+
+    founder_komutlar = [
+        "`/kur` — Sunucu kurulumunu yapar",
+        "`/panel` — Founder panelini DM’den gönderir",
+        "`/banac user_id` — Kullanıcının banını açar",
+    ]
+
+    komutlar = genel_komutlar.copy()
+
+    if is_mod or is_admin or is_founder:
+        komutlar += mod_komutlar
+
+    if is_admin or is_founder:
+        komutlar += admin_komutlar
+
+    if is_founder:
+        komutlar += founder_komutlar
+
+    embed = discord.Embed(
+        title="📜 Kullanabileceğin Komutlar",
+        description="\n".join(komutlar),
+        color=discord.Color.blurple()
+    )
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+# =========================================================
 # /RANK
 # =========================================================
 @bot.tree.command(name="rank", description="Kendi seviyeni gösterir", guild=discord.Object(id=GUILD_ID))
