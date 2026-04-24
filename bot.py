@@ -92,6 +92,17 @@ GAMES = [
         "display": "Among Us",
         "aliases": ["Among Us"],
     },
+    {
+    "role": "🚛 ETS 2",
+    "category": "🎮 Euro Truck Simulator 2",
+    "slug": "ets-2",
+    "display": "Euro Truck Simulator 2",
+    "aliases": [
+        "Euro Truck Simulator 2",
+        "ETS 2",
+        "ETS2"
+    ],
+    },
 ]
 
 GAME_ROLE_NAMES = [g["role"] for g in GAMES]
