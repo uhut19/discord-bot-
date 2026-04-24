@@ -788,63 +788,6 @@ async def leaderboard(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed)
     
-@bot.tree.command(name="panel", description="Founder özel yönetim paneli", guild=discord.Object(id=GUILD_ID))
-async def panel(interaction: discord.Interaction):
-    if interaction.user.id != OWNER_USER_ID:
-        await interaction.response.send_message("Bu panel sadece Founder içindir.", ephemeral=True)
-        return
-
-    if not interaction.guild:
-        await interaction.response.send_message("Bu komut sadece sunucuda çalışır.", ephemeral=True)
-        return
-
-    await interaction.response.send_message("Panel özelden gönderildi.", ephemeral=True)
-
-    guild = interaction.guild
-
-    con = db()
-    cur = con.cursor()
-    cur.execute("""
-        SELECT user_id, count
-        FROM swear_counts
-        WHERE guild_id=?
-        ORDER BY count DESC
-        LIMIT 20
-    """, (guild.id,))
-    swear_rows = cur.fetchall()
-    con.close()
-
-    swear_lines = []
-    if swear_rows:
-        for user_id, count in swear_rows:
-            member = guild.get_member(user_id)
-            name = member.name if member else f"ID: {user_id}"
-            swear_lines.append(f"• {name} — {count} küfür")
-    else:
-        swear_lines.append("Küfür kaydı yok.")
-
-    ban_lines = []
-    try:
-        async for ban_entry in guild.bans(limit=20):
-            user = ban_entry.user
-            reason = ban_entry.reason or "Sebep yok"
-            ban_lines.append(f"• {user.name} — {reason}")
-    except:
-        ban_lines.append("Ban listesi alınamadı.")
-
-    if not ban_lines:
-        ban_lines.append("Banlı kullanıcı yok.")
-
-    embed = discord.Embed(
-        title="🛡️ Zental Founder Panel",
-        description=f"Sunucu: **{guild.name}**",
-        color=discord.Color.dark_red()
-    )
-
-    embed.add_field(name="🤬 Küfür Kayıtları", value="\n".join(swear_lines)[:1024], inline=False)
-    embed.add_field(name="🔨 Banlı Kullanıcılar", value="\n".join(ban_lines)[:1024], inline=False)
-
-    await interaction.user.send(embed=embed)
 # =========================================================
 # /PANEL
 # =========================================================
