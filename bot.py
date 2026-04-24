@@ -2,6 +2,8 @@ import os
 import time
 import random
 import sqlite3
+import asyncio
+from datetime import datetime
 from datetime import timedelta
 
 import discord
@@ -567,6 +569,64 @@ async def handle_moderation(message: discord.Message):
         return False
 
 
+# =========================================================
+# HAFTALIK POPÜLER OYUN SİSTEMİ
+# =========================================================
+
+weekly_game_task_started = False
+
+
+async def weekly_game_task():
+    await bot.wait_until_ready()
+
+    while not bot.is_closed():
+        now = datetime.utcnow()
+
+        # Pazartesi 12:00 UTC / Türkiye saatiyle yaklaşık 15:00
+        if now.weekday() == 0 and now.hour == 12:
+            for guild in bot.guilds:
+                try:
+                    one_week_ago = time.time() - (7 * 24 * 60 * 60)
+
+                    con = db()
+                    cur = con.cursor()
+                    cur.execute("""
+                        SELECT game_name, SUM(count) as total
+                        FROM game_stats
+                        WHERE guild_id=? AND last_seen>=?
+                        GROUP BY game_slug, game_name
+                        ORDER BY total DESC
+                        LIMIT 3
+                    """, (guild.id, one_week_ago))
+
+                    rows = cur.fetchall()
+                    con.close()
+
+                    if not rows:
+                        continue
+
+                    lines = []
+                    medals = ["🥇", "🥈", "🥉"]
+
+                    for i, (game_name, total) in enumerate(rows):
+                        lines.append(f"{medals[i]} **{game_name}** — {total} aktivite")
+
+                    channel = find_text_channel(guild, "log")
+
+                    if channel:
+                        await channel.send(
+                            "🏆 **HAFTALIK POPÜLER OYUN RAPORU**\n\n"
+                            + "\n".join(lines)
+                        )
+
+                except Exception as e:
+                    print("Haftalık oyun raporu hatası:", e)
+
+            # Aynı saat içinde tekrar atmaması için 1 saat bekle
+            await asyncio.sleep(3600)
+
+        await asyncio.sleep(300)
+    
 # =========================================================
 # YAYIN VE OYUN SPAM KORUMA VERİLERİ
 # =========================================================
