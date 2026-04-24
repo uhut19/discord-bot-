@@ -1879,7 +1879,6 @@ async def kur(interaction: discord.Interaction):
     "• `/panel` → Founder yönetim paneli\n\n"
 
     "⚠️ **Sunucuda bulunman, bu kuralları kabul ettiğin anlamına gelir.**"
-)
                     )
             except Exception:
                 pass
