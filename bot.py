@@ -1327,18 +1327,84 @@ async def warn(ctx, member: discord.Member, *, reason="Sebep yok"):
         await ctx.send("Bu komutu kullanamazsın.")
         return
 
+    con = db()
+    cur = con.cursor()
+
+    # kullanıcı yoksa oluştur
+    cur.execute("""
+        INSERT OR IGNORE INTO warns (guild_id, user_id, warn_count)
+        VALUES (?, ?, 0)
+    """, (ctx.guild.id, member.id))
+
+    # warn artır
+    cur.execute("""
+        UPDATE warns
+        SET warn_count = warn_count + 1,
+            last_reason = ?,
+            last_warned_by = ?,
+            last_warned_at = ?
+        WHERE guild_id=? AND user_id=?
+    """, (reason, ctx.author.id, time.time(), ctx.guild.id, member.id))
+
+    # yeni warn sayısı
+    cur.execute("""
+        SELECT warn_count FROM warns
+        WHERE guild_id=? AND user_id=?
+    """, (ctx.guild.id, member.id))
+
+    warn_count = cur.fetchone()[0]
+    con.commit()
+    con.close()
+
+    # CEZA SİSTEMİ
+    action_text = ""
+
+    try:
+        if warn_count == 3:
+            await member.timeout(timedelta(minutes=30), reason="3 warn")
+            action_text = "🔇 30 dakika susturuldu"
+
+        elif warn_count >= 5:
+            await member.ban(reason="5 warn")
+            action_text = "🔨 banlandı"
+
+    except Exception as e:
+        print("Warn ceza hatası:", e)
+
+    # LOG
     log_channel = find_text_channel(ctx.guild, "log")
     if log_channel:
         await log_channel.send(
-            f"⚠️ **UYARI**\nKullanıcı: {member.mention}\nYetkili: {ctx.author.mention}\nSebep: {reason}"
+            f"⚠️ **WARN**\n"
+            f"Kullanıcı: {member.mention}\n"
+            f"Yetkili: {ctx.author.mention}\n"
+            f"Sebep: {reason}\n"
+            f"Toplam Warn: **{warn_count}**\n"
+            f"{action_text}"
         )
 
-    try:
-        await member.send(f"⚠️ **{ctx.guild.name}** sunucusunda uyarı aldın.\nSebep: {reason}")
-    except Exception:
-        pass
+    await ctx.send(
+        f"{member.mention} uyarıldı.\nToplam warn: **{warn_count}**\n{action_text}"
+    )
+    
+@bot.command(name="warnlar")
+async def warnlar(ctx, member: discord.Member = None):
+    member = member or ctx.author
 
-    await ctx.send(f"{member.mention} uyarıldı. Sebep: {reason}")
+    con = db()
+    cur = con.cursor()
+
+    cur.execute("""
+        SELECT warn_count FROM warns
+        WHERE guild_id=? AND user_id=?
+    """, (ctx.guild.id, member.id))
+
+    row = cur.fetchone()
+    con.close()
+
+    count = row[0] if row else 0
+
+    await ctx.send(f"{member.mention} kullanıcısının warn sayısı: **{count}**")
 # =========================================================
 # TICKET SİSTEMİ
 # =========================================================
