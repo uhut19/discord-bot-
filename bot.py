@@ -755,7 +755,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
             )
 
 # =========================================================
-# MESAJ: KÜFÜR + XP
+# MESAJ: KÜFÜR + XP + AKILLI MODERASYON
 # =========================================================
 @bot.event
 async def on_message(message: discord.Message):
@@ -763,7 +763,7 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-        if not isinstance(message.author, discord.Member):
+    if not isinstance(message.author, discord.Member):
         await bot.process_commands(message)
         return
 
@@ -790,21 +790,24 @@ async def on_message(message: discord.Message):
                 if count == 1:
                     await message.author.timeout(timedelta(minutes=5), reason="1. küfür - 5 dakika timeout")
                     await message.channel.send(
-                        f"{message.author.mention} **küfür etmek yasaktır.** 1. ceza: **5 dakika timeout**.",
+                        f"{message.author.mention} **küfür yasak.** 1. ceza: **5 dakika timeout**.",
                         delete_after=10
                     )
+
                 elif count == 2:
                     await message.author.timeout(timedelta(minutes=10), reason="2. küfür - 10 dakika timeout")
                     await message.channel.send(
-                        f"{message.author.mention} **küfür etmek yasaktır.** 2. ceza: **10 dakika timeout**.",
+                        f"{message.author.mention} **küfür yasak.** 2. ceza: **10 dakika timeout**.",
                         delete_after=10
                     )
+
                 elif count == 3:
                     await message.author.timeout(timedelta(minutes=30), reason="3. küfür - 30 dakika timeout")
                     await message.channel.send(
-                        f"{message.author.mention} **küfür etmek yasaktır.** 3. ceza: **30 dakika timeout**.",
+                        f"{message.author.mention} **küfür yasak.** 3. ceza: **30 dakika timeout**.",
                         delete_after=10
                     )
+
                 else:
                     await message.guild.ban(message.author, reason="Tekrarlayan küfür - otomatik ban")
                     await message.channel.send(
@@ -812,15 +815,31 @@ async def on_message(message: discord.Message):
                         delete_after=10
                     )
 
+                log_channel = find_text_channel(message.guild, "log")
+                if log_channel:
+                    await log_channel.send(
+                        f"🤬 **KÜFÜR CEZASI**\n"
+                        f"Kullanıcı: {message.author.mention}\n"
+                        f"Küfür sayısı: **{count}**\n"
+                        f"Kanal: {message.channel.mention}"
+                    )
+
                 await bot.process_commands(message)
                 return
+
             except Exception as e:
                 print("Küfür sistemi hatası:", e)
 
+    # XP SİSTEMİ
     ensure_level_user(message.guild.id, message.author.id)
 
     if can_gain_xp(message.guild.id, message.author.id):
-        xp, level, leveled_up = add_xp(message.guild.id, message.author.id, random.randint(15, 25))
+        xp, level, leveled_up = add_xp(
+            message.guild.id,
+            message.author.id,
+            random.randint(15, 25)
+        )
+
         if leveled_up:
             try:
                 await apply_level_reward_roles(message.author, level)
@@ -832,33 +851,7 @@ async def on_message(message: discord.Message):
                 pass
 
     await bot.process_commands(message)
-
-@bot.event
-async def on_member_ban(guild, user):
-    try:
-        async for entry in guild.audit_logs(limit=1, action=discord.AuditLogAction.ban):
-            if entry.target.id == user.id:
-                banned_by = entry.user.id
-                reason = entry.reason or "Sebep yok"
-
-                con = db()
-                cur = con.cursor()
-                cur.execute("""
-                    INSERT OR REPLACE INTO ban_logs (guild_id, user_id, banned_by, reason, banned_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (guild.id, user.id, banned_by, reason, time.time()))
-                con.commit()
-                con.close()
-
-                log_channel = find_text_channel(guild, "log")
-                if log_channel:
-                    await log_channel.send(
-                        f"🔨 **BAN**\nKullanıcı: <@{user.id}>\nYetkili: <@{banned_by}>\nSebep: {reason}"
-                    )
-                break
-    except Exception as e:
-        print("Ban log hatası:", e)
-
+    
 # =========================================================
 # /PING
 # =========================================================
