@@ -183,6 +183,18 @@ def init_db():
         PRIMARY KEY (guild_id, user_id)
          )
      """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS warns (
+        guild_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        warn_count INTEGER NOT NULL DEFAULT 0,
+        last_reason TEXT,
+        last_warned_by INTEGER,
+        last_warned_at REAL,
+        PRIMARY KEY (guild_id, user_id)
+         )
+     """)
     
     con.commit()
     con.close()
