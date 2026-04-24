@@ -508,8 +508,11 @@ CAPS_MIN_LENGTH = 12
 CAPS_PERCENT = 0.70
 
 message_cache = {}
+active_streams = set()
+last_game_seen = {}
 
 weekly_game_task_started = False
+backup_task_started = False
 
 
 async def handle_moderation(message: discord.Message):
@@ -569,8 +572,7 @@ async def handle_moderation(message: discord.Message):
                     print("Caps moderasyon hatası:", e)
                 return True
 
-        return False
-
+    return False
 
 # =========================================================
 # HAFTALIK POPÜLER OYUN SİSTEMİ
@@ -763,17 +765,19 @@ async def setup_views():
 
 @bot.event
 async def on_ready():
+    global weekly_game_task_started, backup_task_started
+
     init_db()
 
-    global weekly_game_task_started
-if not weekly_game_task_started:
-    bot.loop.create_task(weekly_game_task())
-    weekly_game_task_started = True
+    # Haftalık sistem
+    if not weekly_game_task_started:
+        bot.loop.create_task(weekly_game_task())
+        weekly_game_task_started = True
 
-global backup_task_started
-if not backup_task_started:
-    bot.loop.create_task(backup_db_task())
-    backup_task_started = True
+    # Yedek sistemi
+    if not backup_task_started:
+        bot.loop.create_task(backup_db_task())
+        backup_task_started = True
 
     await setup_views()
 
