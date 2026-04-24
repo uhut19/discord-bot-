@@ -884,6 +884,142 @@ async def banac(interaction: discord.Interaction, user_id: str):
     except Exception as e:
         await interaction.response.send_message(f"Hata: {e}", ephemeral=True)
 # =========================================================
+# MODERASYON KOMUTLARI
+# =========================================================
+
+def is_staff(member: discord.Member) -> bool:
+    allowed_roles = {"👑 Founder", "⚡ Co-Owner", "🛠️ Admin", "🛡️ Moderation Team"}
+    return any(role.name in allowed_roles for role in member.roles)
+
+
+@bot.command(name="ban")
+async def ban(ctx, member: discord.Member, *, reason="Sebep yok"):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    try:
+        await member.ban(reason=reason)
+
+        con = db()
+        cur = con.cursor()
+        cur.execute("""
+            INSERT OR REPLACE INTO ban_logs (guild_id, user_id, banned_by, reason, banned_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (ctx.guild.id, member.id, ctx.author.id, reason, time.time()))
+        con.commit()
+        con.close()
+
+        log_channel = find_text_channel(ctx.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🔨 **BAN**\nKullanıcı: {member.mention}\nYetkili: {ctx.author.mention}\nSebep: {reason}"
+            )
+
+        await ctx.send(f"{member.mention} banlandı.")
+    except Exception as e:
+        await ctx.send(f"Hata: {e}")
+
+
+@bot.command(name="kick")
+async def kick(ctx, member: discord.Member, *, reason="Sebep yok"):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    try:
+        await member.kick(reason=reason)
+
+        log_channel = find_text_channel(ctx.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"👢 **KICK**\nKullanıcı: {member.mention}\nYetkili: {ctx.author.mention}\nSebep: {reason}"
+            )
+
+        await ctx.send(f"{member.mention} sunucudan atıldı.")
+    except Exception as e:
+        await ctx.send(f"Hata: {e}")
+
+
+@bot.command(name="mute")
+async def mute(ctx, member: discord.Member, minutes: int = 10, *, reason="Sebep yok"):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    try:
+        await member.timeout(timedelta(minutes=minutes), reason=reason)
+
+        log_channel = find_text_channel(ctx.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🔇 **MUTE / TIMEOUT**\nKullanıcı: {member.mention}\nSüre: {minutes} dakika\nYetkili: {ctx.author.mention}\nSebep: {reason}"
+            )
+
+        await ctx.send(f"{member.mention} {minutes} dakika susturuldu.")
+    except Exception as e:
+        await ctx.send(f"Hata: {e}")
+
+
+@bot.command(name="unmute")
+async def unmute(ctx, member: discord.Member):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    try:
+        await member.timeout(None, reason=f"Unmute yapan: {ctx.author}")
+
+        log_channel = find_text_channel(ctx.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🔊 **UNMUTE**\nKullanıcı: {member.mention}\nYetkili: {ctx.author.mention}"
+            )
+
+        await ctx.send(f"{member.mention} susturması kaldırıldı.")
+    except Exception as e:
+        await ctx.send(f"Hata: {e}")
+
+
+@bot.command(name="temizle")
+async def temizle(ctx, amount: int = 10):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    try:
+        deleted = await ctx.channel.purge(limit=amount + 1)
+
+        log_channel = find_text_channel(ctx.guild, "log")
+        if log_channel:
+            await log_channel.send(
+                f"🧹 **MESAJ TEMİZLEME**\nKanal: {ctx.channel.mention}\nAdet: {len(deleted) - 1}\nYetkili: {ctx.author.mention}"
+            )
+
+        await ctx.send(f"{len(deleted) - 1} mesaj temizlendi.", delete_after=5)
+    except Exception as e:
+        await ctx.send(f"Hata: {e}")
+
+
+@bot.command(name="warn")
+async def warn(ctx, member: discord.Member, *, reason="Sebep yok"):
+    if not is_staff(ctx.author):
+        await ctx.send("Bu komutu kullanamazsın.")
+        return
+
+    log_channel = find_text_channel(ctx.guild, "log")
+    if log_channel:
+        await log_channel.send(
+            f"⚠️ **UYARI**\nKullanıcı: {member.mention}\nYetkili: {ctx.author.mention}\nSebep: {reason}"
+        )
+
+    try:
+        await member.send(f"⚠️ **{ctx.guild.name}** sunucusunda uyarı aldın.\nSebep: {reason}")
+    except Exception:
+        pass
+
+    await ctx.send(f"{member.mention} uyarıldı. Sebep: {reason}")
+# =========================================================
 # /ROLPANEL
 # =========================================================
 @bot.tree.command(name="rolpanel", description="Oyun rol panelini tekrar yollar", guild=discord.Object(id=GUILD_ID))
