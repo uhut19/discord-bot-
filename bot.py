@@ -564,7 +564,14 @@ async def handle_moderation(message: discord.Message):
                     print("Caps moderasyon hatası:", e)
                 return True
 
-    return False
+        return False
+
+
+# =========================================================
+# YAYIN VE OYUN SPAM KORUMA VERİLERİ
+# =========================================================
+active_streams = set()
+last_game_seen = {}
 # =========================================================
 # OYUN ROL BUTONLARI
 # =========================================================
@@ -768,15 +775,6 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
                 after.guild,
                 category,
                 f"{game['display']} {i}"
-            )
-
-        log_channel = find_text_channel(after.guild, "log")
-        if log_channel:
-            await log_channel.send(
-                f"🎮 **POPÜLER OYUN ALGILANDI**\n"
-                f"Kullanıcı: {after.mention}\n"
-                f"Oyun: **{game['display']}**\n"
-                f"Rol ve oyun odaları kontrol edildi."
             )
 
         break
