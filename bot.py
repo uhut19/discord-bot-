@@ -1029,9 +1029,7 @@ async def check_twitch_live(guild):
                 live_cache[cache_key] = True
 
                 await kanal.send(
-                    f"🔴 **{twitch_name} Twitch canlı yayında!**
-
-"
+                    f"🔴 **{twitch_name} Twitch canlı yayında!**"
                     f"📺 https://twitch.tv/{twitch_name}"
                 )
 
