@@ -47,16 +47,16 @@ BAD_WORDS = [
 ]
 
 GAMES = [
-    "GTA V",
-    "League of Legends",
-    "VALORANT",
-    "CS2",
-    "Minecraft",
-    "Rust",
-    "PUBG",
-    "PUBG Mobile",
-    "Among Us",
-    "ETS 2"
+    {"name": "GTA V", "emoji": "🚗"},
+    {"name": "League of Legends", "emoji": "⚔️"},
+    {"name": "VALORANT", "emoji": "🎯"},
+    {"name": "CS2", "emoji": "🔫"},
+    {"name": "Minecraft", "emoji": "🧱"},
+    {"name": "Rust", "emoji": "☢️"},
+    {"name": "PUBG", "emoji": "🐔"},
+    {"name": "PUBG Mobile", "emoji": "📱"},
+    {"name": "Among Us", "emoji": "👨‍🚀"},
+    {"name": "ETS 2", "emoji": "🚛"}
 ]
 
 VOICE_EMOJIS = ["🎧", "🔥", "⚔️", "🎮", "💀"]
@@ -112,7 +112,8 @@ def find_text_channel(guild, name):
 def is_staff(member):
     allowed = [
         "👑 Founder",
-        "⚡ Yönetici",
+        "💠 Co-Founder",
+            "⚡ Yönetici",
         "🔧 Admin",
         "🛡️ Moderatör"
     ]
@@ -383,6 +384,196 @@ async def rolpanel(interaction):
 
 
 # =========================================================
+# GÜNCELLEME SİSTEMİ
+# /guncelle mevcut sunucuyu silmez.
+# Sadece eksik kanal/rol/panel/metin varsa ekler veya günceller.
+# =========================================================
+@bot.tree.command(
+    name="guncelle",
+    description="Mevcut sunucuyu silmeden Zental ayarlarını günceller",
+    guild=discord.Object(id=GUILD_ID)
+)
+async def guncelle(interaction):
+
+    if interaction.user.id != OWNER_USER_ID:
+        await interaction.response.send_message(
+            "Sadece Founder kullanabilir",
+            ephemeral=True
+        )
+        return
+
+    guild = interaction.guild
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        # ROLLERİ EKSİKSE OLUŞTUR
+        member_perm = discord.Permissions(
+            send_messages=True,
+            connect=True,
+            speak=True,
+            view_channel=True
+        )
+
+        role_names = [
+            "👤 Üye",
+            "👑 Prenses",
+            "🎥 Yayıncı",
+            "⚔️ Takım 1",
+            "🔥 Aktif Üye",
+            "💎 VIP",
+            "🛡️ Moderatör",
+            "🔧 Admin",
+            "⚡ Yönetici",
+            "👑 Founder",
+        ]
+
+        for game in GAMES:
+            role_names.append(f"🎮 {game}")
+
+        for role_name in role_names:
+            await get_or_create_role(guild, role_name, member_perm)
+
+        # KURALLAR KANALINI BUL VEYA OLUŞTUR
+        kurallar = find_text_channel(guild, "📜・kurallar")
+
+        if not kurallar:
+            info_cat = discord.utils.get(guild.categories, name="📢 BİLGİ")
+            if not info_cat:
+                info_cat = await guild.create_category("📢 BİLGİ")
+
+            kurallar = await guild.create_text_channel(
+                "📜・kurallar",
+                category=info_cat
+            )
+
+        # BOTUN ESKİ KURAL MESAJLARINI TEMİZLE
+        async for msg in kurallar.history(limit=50):
+            if msg.author == guild.me:
+                try:
+                    await msg.delete()
+                except:
+                    pass
+
+        await kurallar.send(
+            "📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
+
+"
+            "Zental Community; oyun oynayan, ekip kuran, yayın yapan ve sohbet eden insanların düzenli şekilde bir araya geldiği bir topluluktur. "
+            "Sunucuda bulunan herkes bu kuralları okumuş, anlamış ve kabul etmiş sayılır. Kuralların amacı kimseyi kısıtlamak değil; ortamın kaliteli, güvenli ve saygılı kalmasını sağlamaktır.
+
+"
+
+            "━━━━━━━━━━━━━━━━━━━━
+"
+            "**1️⃣ Saygı ve Üslup Kuralı**
+"
+            "Herkese karşı saygılı konuşmak zorunludur. Hakaret, aşağılama, dalga geçme, küçük düşürme, tehdit, hedef gösterme, kışkırtma ve sürekli tartışma çıkarmak yasaktır. "
+            "Şaka adı altında yapılan rahatsız edici söylemler de kural ihlali sayılır. Bir kişi rahatsız olduğunu söylüyorsa konu uzatılmaz.
+
+"
+
+            "**2️⃣ Küfür ve Ağır Argo Kuralı**
+"
+            "Sunucuda küfür, ağır argo, ailevi değerlere hakaret ve kişisel saldırı yasaktır. Küfür sistemi aktiftir. Bot küfür algıladığında mesajı silebilir, kullanıcıya timeout verebilir veya tekrarında ban uygulayabilir. "
+            "Özellikle anne, baba, aile, din, millet ve kişisel değerlere yapılan hakaretler ağır ihlal sayılır.
+
+"
+
+            "**3️⃣ Reklam ve Link Paylaşımı**
+"
+            "İzinsiz Discord davet linki, Twitch/YouTube/Kick kanal reklamı, satış linki, sosyal medya tanıtımı, ürün reklamı, bahis linki veya zararlı bağlantı paylaşmak yasaktır. "
+            "Reklam sadece `📣・reklam` kanalında ve sadece yetkili kişiler tarafından paylaşılabilir. Özel mesajdan reklam yapmak da yasaktır.
+
+"
+
+            "**4️⃣ Spam, Flood ve Etiket Kuralı**
+"
+            "Aynı mesajı tekrar tekrar atmak, gereksiz emoji basmak, art arda anlamsız mesaj göndermek, sürekli büyük harfle yazmak, yetkilileri veya üyeleri gereksiz etiketlemek yasaktır. "
+            "Sunucunun düzenini bozan her davranış spam/flood kapsamında değerlendirilir.
+
+"
+
+            "**5️⃣ Ses Kanalı Kuralları**
+"
+            "Ses kanallarında bağırmak, mikrofon basmak, rahatsız edici ses açmak, izinsiz müzik açmak, odaya girip çıkıp rahatsız etmek, insanları bilerek provoke etmek yasaktır. "
+            "AFK odası sadece aktif olmayan kullanıcılar içindir. Müzik odası dışındaki kanallarda rahatsız edici şekilde müzik açmak yasaktır.
+
+"
+
+            "**6️⃣ Takım ve Oyun Odaları**
+"
+            "Oyun odaları ilgili oyunu oynayan veya ekip arayan kişiler içindir. Takım 1 özel kanalı sadece `⚔️ Takım 1` rolüne sahip kullanıcılar içindir. "
+            "Başka takımların konuşmalarını bozmak, odaya girip huzur bozmak veya ekip içi bilgileri dışarı taşımak yasaktır.
+
+"
+
+            "**7️⃣ Yayıncı Kuralları**
+"
+            "Yayıncı rolüne sahip kişiler yayın duyurusu yapabilir; ancak spam şeklinde duyuru atamaz. Yayın başlığı, içerik ve davranış sunucu kurallarına uygun olmalıdır. "
+            "Zental adını kötü gösterecek davranışlar yayıncı rolünün kaldırılmasına sebep olabilir.
+
+"
+
+            "**8️⃣ Uygunsuz İçerik Kuralı**
+"
+            "+18 içerik, cinsel ima, şiddet içerikli görsel/video, rahatsız edici medya, nefret söylemi, ırkçılık, ayrımcılık, yasa dışı içerik ve zararlı dosya paylaşımı yasaktır. "
+            "Profil fotoğrafı, kullanıcı adı ve durum mesajı da bu kurala dahildir.
+
+"
+
+            "**9️⃣ Dolandırıcılık ve Güvenlik**
+"
+            "Hesap satışı, hile satışı, skin/para dolandırıcılığı, sahte çekiliş, phishing linki, zararlı dosya ve kullanıcı kandırmaya yönelik her davranış kesinlikle yasaktır. "
+            "Bu tarz ihlallerde uyarı yapılmadan kalıcı ban uygulanabilir.
+
+"
+
+            "**🔟 Yetkili Kararları**
+"
+            "Yetkililerin amacı ortamı korumaktır. Yetkili kararlarına saygı gösterilmelidir. İtiraz edilecekse sakin ve düzgün bir dille yapılmalıdır. "
+            "Yetkiliye hakaret etmek, kararı sabote etmek, tartışmayı büyütmek veya manipülasyon yapmak ek ceza sebebidir.
+
+"
+
+            "━━━━━━━━━━━━━━━━━━━━
+"
+            "**⚠️ CEZA SİSTEMİ**
+"
+            "• 1. küfür/ihlal: uyarı veya kısa timeout
+"
+            "• 2. ihlal: daha uzun timeout
+"
+            "• 3. ihlal: uzun timeout / rol kaldırma
+"
+            "• Ağır ihlal: direkt kick veya kalıcı ban
+"
+            "• Reklam, dolandırıcılık, zararlı link, ailevi ağır hakaret: direkt kalıcı ban uygulanabilir
+
+"
+
+            "**🚫 Ciddi Yaptırımlar**
+"
+            "Kurallara uymayan kullanıcılar; mesaj silme, timeout, rol kaldırma, kanaldan men, kick, kalıcı ban veya kara liste cezası alabilir. "
+            "Sunucuda kalmak, bu kurallara uyacağını kabul etmek anlamına gelir.
+
+"
+
+            "👑 **Son karar Founder ve Yönetim ekibine aittir.**"
+        )
+
+        await interaction.followup.send(
+            "✅ Güncelleme tamamlandı. Hiçbir kanal silinmedi; mevcut sistemin üstüne eksikler eklendi ve kurallar yenilendi.",
+            ephemeral=True
+        )
+
+    except Exception as e:
+        await interaction.followup.send(
+            f"Güncelleme hatası: {e}",
+            ephemeral=True
+        )
+
+
+# =========================================================
 # FULL KURULUM
 # =========================================================
 @bot.tree.command(
@@ -473,6 +664,33 @@ async def kur(interaction):
         # =================================================
         # ROLLER
         # =================================================
+        role_colors = {
+            "👑 Founder": discord.Color.from_rgb(255, 215, 0),
+            "💠 Co-Founder": discord.Color.from_rgb(0, 255, 170),
+            "⚡ Yönetici": discord.Color.from_rgb(255, 0, 0),
+            "🔧 Admin": discord.Color.from_rgb(255, 85, 85),
+            "🛡️ Moderatör": discord.Color.from_rgb(0, 170, 255),
+            "👤 Üye": discord.Color.from_rgb(120, 120, 120),
+            "👑 Prenses": discord.Color.from_rgb(255, 105, 180),
+            "🎥 Yayıncı": discord.Color.from_rgb(170, 0, 255),
+            "⚔️ Takım 1": discord.Color.from_rgb(255, 140, 0),
+            "🔥 Aktif Üye": discord.Color.from_rgb(255, 80, 0),
+            "💎 VIP": discord.Color.from_rgb(0, 255, 255),
+        }
+
+        game_colors = [
+            discord.Color.from_rgb(0, 255, 120),
+            discord.Color.from_rgb(255, 0, 255),
+            discord.Color.from_rgb(0, 140, 255),
+            discord.Color.from_rgb(255, 255, 0),
+            discord.Color.from_rgb(0, 255, 200),
+            discord.Color.from_rgb(255, 120, 120),
+            discord.Color.from_rgb(120, 255, 120),
+            discord.Color.from_rgb(120, 120, 255),
+            discord.Color.from_rgb(255, 180, 0),
+            discord.Color.from_rgb(180, 0, 255),
+        ]
+        # =================================================
         founder_perm = discord.Permissions.all()
 
         admin_perm = discord.Permissions(
@@ -486,34 +704,40 @@ async def kur(interaction):
             view_channel=True
         )
 
-        founder_role = await get_or_create_role(
-            guild,
-            "👑 Founder",
-            founder_perm
+        founder_role = await guild.create_role(
+            name="👑 Founder",
+            permissions=founder_perm,
+            color=role_colors["👑 Founder"]
         )
 
-        yonetici_role = await get_or_create_role(
-            guild,
-            "⚡ Yönetici",
-            admin_perm
+        co_founder_role = await guild.create_role(
+            name="💠 Co-Founder",
+            permissions=admin_perm,
+            color=role_colors["💠 Co-Founder"]
         )
 
-        admin_role = await get_or_create_role(
-            guild,
-            "🔧 Admin",
-            admin_perm
+        yonetici_role = await guild.create_role(
+            name="⚡ Yönetici",
+            permissions=admin_perm,
+            color=role_colors["⚡ Yönetici"]
         )
 
-        mod_role = await get_or_create_role(
-            guild,
-            "🛡️ Moderatör",
-            admin_perm
+        admin_role = await guild.create_role(
+            name="🔧 Admin",
+            permissions=admin_perm,
+            color=role_colors["🔧 Admin"]
         )
 
-        uye_role = await get_or_create_role(
-            guild,
-            "👤 Üye",
-            member_perm
+        mod_role = await guild.create_role(
+            name="🛡️ Moderatör",
+            permissions=admin_perm,
+            color=role_colors["🛡️ Moderatör"]
+        )
+
+        uye_role = await guild.create_role(
+            name="👤 Üye",
+            permissions=member_perm,
+            color=role_colors["👤 Üye"]
         )
 
         await get_or_create_role(
@@ -549,7 +773,7 @@ async def kur(interaction):
         for game in GAMES:
             await get_or_create_role(
                 guild,
-                f"🎮 {game}",
+                f"{game['emoji']} {game['name']}",
                 member_perm
             )
 
@@ -639,10 +863,10 @@ async def kur(interaction):
         # =================================================
         for game in GAMES:
 
-            game_role = find_role(guild, f"🎮 {game}")
+            game_role = find_role(guild, f"{game['emoji']} {game['name']}")
 
             game_cat = await guild.create_category(
-                f"🎮 {game}",
+                f"{game['emoji']} {game['name']}",
                 overwrites={
                     guild.default_role: discord.PermissionOverwrite(
                         view_channel=True
@@ -657,18 +881,18 @@ async def kur(interaction):
             )
 
             await guild.create_text_channel(
-                f"💬・{game.lower().replace(' ', '-')}-sohbet",
+                f"💬・{game['name'].lower().replace(' ', '-')}-sohbet",
                 category=game_cat
             )
 
             await guild.create_text_channel(
-                f"🤝・{game.lower().replace(' ', '-')}-takim-ara",
+                f"🤝・{game['name'].lower().replace(' ', '-')}-takim-ara",
                 category=game_cat
             )
 
             for i in range(5):
                 await guild.create_voice_channel(
-                    f"{VOICE_EMOJIS[i]}・{game} {i+1}",
+                    f"{VOICE_EMOJIS[i]}・{game['name']} {i+1}",
                     category=game_cat
                 )
 
