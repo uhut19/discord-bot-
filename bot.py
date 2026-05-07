@@ -892,7 +892,7 @@ async def on_presence_update(before: discord.Member, after: discord.Member):
             topic=f"{game['display']} takım arkadaşı bulma"
         )
 
-        for i in range(1, 9):
+        for i in range(1, 6):
             await get_or_create_voice_channel(
                 after.guild,
                 category,
