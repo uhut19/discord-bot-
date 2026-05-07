@@ -455,7 +455,7 @@ async def guncelle(interaction):
                     pass
 
         await kurallar.send(
-            """📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
+    """📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
 
 Zental Community düzenli, saygılı ve kaliteli bir oyun topluluğudur.
 Sunucuda bulunan herkes aşağıdaki kuralları kabul etmiş sayılır.
@@ -506,7 +506,7 @@ uygulanabilir.
 
 👑 Son karar Founder ve Yönetim ekibine aittir.
 """
-        )
+)
 
         # ESKİ HATALI KURAL MESAJI KAPATILDI
         #
