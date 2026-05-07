@@ -1097,9 +1097,7 @@ async def check_youtube_live(guild):
                     video_id = live_data["items"][0]["id"]["videoId"]
 
                     await kanal.send(
-                        f"🔴 **{youtube_name} YouTube canlı yayında!**
-
-"
+                        f"🔴 **{youtube_name} YouTube canlı yayında!**"
                         f"📺 https://youtube.com/watch?v={video_id}"
                     )
 
