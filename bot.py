@@ -455,6 +455,61 @@ async def guncelle(interaction):
                     pass
 
         await kurallar.send(
+            """📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
+
+Zental Community düzenli, saygılı ve kaliteli bir oyun topluluğudur.
+Sunucuda bulunan herkes aşağıdaki kuralları kabul etmiş sayılır.
+
+━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Saygılı olun.
+Hakaret, aşağılama, dalga geçme ve huzur bozmak yasaktır.
+
+2️⃣ Küfür yasaktır.
+Bot küfür sistemine sahiptir.
+Tekrarlayan küfürler timeout veya ban ile sonuçlanabilir.
+
+3️⃣ Reklam yasaktır.
+İzinsiz Discord linki, yayın linki veya satış paylaşımı yapılamaz.
+
+4️⃣ Spam ve flood yasaktır.
+Arka arkaya mesaj atmak veya gereksiz etiket kullanmak yasaktır.
+
+5️⃣ Ses odalarında düzen zorunludur.
+Mikrofon basmak, bağırmak veya rahatsızlık vermek yasaktır.
+
+6️⃣ Takım odaları özeldir.
+Takım 1 kanalları sadece ilgili üyeler içindir.
+
+7️⃣ Yetkili kararlarına saygı gösterilmelidir.
+Yetkili tartışmaları büyütme sebebi değildir.
+
+8️⃣ +18 içerik yasaktır.
+Rahatsız edici içerikler direkt ceza sebebidir.
+
+9️⃣ Dolandırıcılık yasaktır.
+Sahte link, scam veya zararlı içerik paylaşımı yasaktır.
+
+🔟 Ağır ihlallerde direkt ban uygulanabilir.
+
+━━━━━━━━━━━━━━━━━━━━
+
+⚠️ CEZA SİSTEMİ
+
+• Timeout
+• Rol kaldırma
+• Kanal engeli
+• Kick
+• Kalıcı ban
+
+uygulanabilir.
+
+👑 Son karar Founder ve Yönetim ekibine aittir.
+"""
+        )
+
+        # ESKİ HATALI KURAL MESAJI KAPATILDI
+        #
             "📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
 
 "
