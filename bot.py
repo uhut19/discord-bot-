@@ -635,6 +635,44 @@ async def kur(interaction):
         )
 
         # =================================================
+        # OYUN ODALARI
+        # =================================================
+        for game in GAMES:
+
+            game_role = find_role(guild, f"🎮 {game}")
+
+            game_cat = await guild.create_category(
+                f"🎮 {game}",
+                overwrites={
+                    guild.default_role: discord.PermissionOverwrite(
+                        view_channel=True
+                    ),
+                    game_role: discord.PermissionOverwrite(
+                        view_channel=True,
+                        send_messages=True,
+                        connect=True,
+                        speak=True
+                    )
+                }
+            )
+
+            await guild.create_text_channel(
+                f"💬・{game.lower().replace(' ', '-')}-sohbet",
+                category=game_cat
+            )
+
+            await guild.create_text_channel(
+                f"🤝・{game.lower().replace(' ', '-')}-takim-ara",
+                category=game_cat
+            )
+
+            for i in range(5):
+                await guild.create_voice_channel(
+                    f"{VOICE_EMOJIS[i]}・{game} {i+1}",
+                    category=game_cat
+                )
+
+        # =================================================
         # SES ODALARI
         # =================================================
         voice_names = [
