@@ -376,244 +376,17 @@ async def set_role_positions(guild: discord.Guild):
         try:
             await guild.edit_role_positions(positions=positions)
         except Exception as e:
-            print("Rol sıralama hatası:", e)
+        import traceback
+        traceback.print_exc()
 
-
-async def delete_old_roles(guild: discord.Guild):
-    me = get_bot_member(guild)
-    for role in list(guild.roles):
-        if role.is_default():
-            continue
-        if me and role >= me.top_role:
-            continue
-        try:
-            await role.delete(reason="Zental sıfır rol kurulumu")
-            await asyncio.sleep(0.25)
-        except Exception as e:
-            print(f"Rol silinemedi: {role.name} | {e}")
-
-
-async def apply_level_reward_roles(member: discord.Member, level: int):
-    aktif_role = find_role(member.guild, "🔥 Aktif Üye")
-    vip_role = find_role(member.guild, "💎 VIP")
-
-    roles_to_add = []
-    if level >= 5 and aktif_role and aktif_role not in member.roles:
-        roles_to_add.append(aktif_role)
-    if level >= 15 and vip_role and vip_role not in member.roles:
-        roles_to_add.append(vip_role)
-
-    if roles_to_add:
-        try:
-            await member.add_roles(*roles_to_add, reason="Seviye ödül rolü")
-        except Exception as e:
-            print("Seviye rolü verilemedi:", e)
-
-# =========================================================
-# AKILLI MODERASYON
-# =========================================================
-async def handle_moderation(message: discord.Message):
-    user_id = message.author.id
-    now = time.time()
-    content = message.content
-    content_lower = content.lower()
-
-    # SPAM
-    message_cache.setdefault(user_id, [])
-    message_cache[user_id] = [t for t in message_cache[user_id] if now - t < SPAM_SECONDS]
-    message_cache[user_id].append(now)
-
-    if len(message_cache[user_id]) >= SPAM_LIMIT:
-        try:
-            await message.delete()
-            await message.author.timeout(timedelta(minutes=2), reason="Spam")
-            await message.channel.send(f"{message.author.mention} spam yapma 🚫 2 dakika susturuldun.", delete_after=7)
-        except Exception as e:
-            print("Spam moderasyon hatası:", e)
-        return True
-
-    # LINK / REKLAM
-    reklam_channel_names = {"reklam"}
-    if message.channel.name not in reklam_channel_names:
-        if any(word in content_lower for word in BLOCKED_LINK_WORDS):
-            try:
-                await message.delete()
-                await message.author.timeout(timedelta(minutes=3), reason="Reklam / link")
-                await message.channel.send(f"{message.author.mention} izinsiz link/reklam yasak 🚫", delete_after=7)
-            except Exception as e:
-                print("Link moderasyon hatası:", e)
-            return True
-
-    # CAPS
-    if len(content) >= CAPS_MIN_LENGTH:
-        letters = [c for c in content if c.isalpha()]
-        if letters:
-            upper_count = sum(1 for c in letters if c.isupper())
-            if upper_count / len(letters) >= CAPS_PERCENT:
-                try:
-                    await message.delete()
-                    await message.channel.send(f"{message.author.mention} büyük harfle yazma 😅", delete_after=7)
-                except Exception as e:
-                    print("Caps moderasyon hatası:", e)
-                return True
-
-    return False
-
-# =========================================================
-# BUTONLU ROL PANELİ
-# =========================================================
-class GameRoleView1(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    async def toggle_role(self, interaction: discord.Interaction, role_name: str):
-        if not interaction.guild or not isinstance(interaction.user, discord.Member):
-            await interaction.response.send_message("Bu işlem sadece sunucuda çalışır.", ephemeral=True)
-            return
-
-        role = find_role(interaction.guild, role_name)
-        if not role:
-            await interaction.response.send_message("Rol bulunamadı.", ephemeral=True)
-            return
+        print(f"/kur hatası: {e}")
 
         try:
-            if role in interaction.user.roles:
-                await interaction.user.remove_roles(role, reason="Butonla rol kaldırma")
-                await interaction.response.send_message(f"{role.name} rolü kaldırıldı.", ephemeral=True)
-            else:
-                await interaction.user.add_roles(role, reason="Butonla rol alma")
-                await interaction.response.send_message(f"{role.name} rolü verildi.", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("Bot rol veremedi. Bot rolünü yukarı taşı.", ephemeral=True)
-
-    @discord.ui.button(label="GTA V", style=discord.ButtonStyle.success, custom_id="role_gtav")
-    async def btn_gtav(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🎮 GTA V")
-
-    @discord.ui.button(label="LoL", style=discord.ButtonStyle.primary, custom_id="role_lol")
-    async def btn_lol(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "⚔️ LoL")
-
-    @discord.ui.button(label="VALORANT", style=discord.ButtonStyle.danger, custom_id="role_valorant")
-    async def btn_val(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🎯 VALORANT")
-
-    @discord.ui.button(label="CS2", style=discord.ButtonStyle.secondary, custom_id="role_cs2")
-    async def btn_cs2(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🔫 CS2")
-
-    @discord.ui.button(label="Minecraft", style=discord.ButtonStyle.success, custom_id="role_minecraft")
-    async def btn_mc(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🧱 Minecraft")
-
-
-class GameRoleView2(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    async def toggle_role(self, interaction: discord.Interaction, role_name: str):
-        if not interaction.guild or not isinstance(interaction.user, discord.Member):
-            await interaction.response.send_message("Bu işlem sadece sunucuda çalışır.", ephemeral=True)
-            return
-
-        role = find_role(interaction.guild, role_name)
-        if not role:
-            await interaction.response.send_message("Rol bulunamadı.", ephemeral=True)
-            return
-
-        try:
-            if role in interaction.user.roles:
-                await interaction.user.remove_roles(role, reason="Butonla rol kaldırma")
-                await interaction.response.send_message(f"{role.name} rolü kaldırıldı.", ephemeral=True)
-            else:
-                await interaction.user.add_roles(role, reason="Butonla rol alma")
-                await interaction.response.send_message(f"{role.name} rolü verildi.", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("Bot rol veremedi. Bot rolünü yukarı taşı.", ephemeral=True)
-
-    @discord.ui.button(label="Rust", style=discord.ButtonStyle.primary, custom_id="role_rust")
-    async def btn_rust(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "☢️ Rust")
-
-    @discord.ui.button(label="PUBG", style=discord.ButtonStyle.secondary, custom_id="role_pubg")
-    async def btn_pubg(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🐔 PUBG")
-
-    @discord.ui.button(label="PUBG Mobile", style=discord.ButtonStyle.secondary, custom_id="role_pubgmobile")
-    async def btn_pubgm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "📱 PUBG Mobile")
-
-    @discord.ui.button(label="Among Us", style=discord.ButtonStyle.secondary, custom_id="role_amongus")
-    async def btn_amongus(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "👨‍🚀 Among Us")
-
-    @discord.ui.button(label="ETS 2", style=discord.ButtonStyle.secondary, custom_id="role_ets2")
-    async def btn_ets2(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.toggle_role(interaction, "🚛 ETS 2")
-
-
-class RegisterView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="✅ Kayıt Ol", style=discord.ButtonStyle.success, custom_id="register_btn")
-    async def register(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not interaction.guild or not isinstance(interaction.user, discord.Member):
-            await interaction.response.send_message("Sunucuda kullan.", ephemeral=True)
-            return
-
-        if is_owner_or_co_owner(interaction.user):
-            await interaction.response.send_message("Yönetici olduğun için sana otomatik üye rolü verilmedi.", ephemeral=True)
-            return
-
-        uye_role = find_role(interaction.guild, "👤 Üye")
-        kayitsiz_role = find_role(interaction.guild, "❌ Kayıtsız")
-
-        try:
-            if uye_role:
-                await interaction.user.add_roles(uye_role, reason="Kayıt butonu")
-            if kayitsiz_role and kayitsiz_role in interaction.user.roles:
-                await interaction.user.remove_roles(kayitsiz_role, reason="Kayıt tamamlandı")
-            await interaction.response.send_message("Kayıt tamamlandı 🎉", ephemeral=True)
-        except Exception as e:
-            await interaction.response.send_message(f"Hata: {e}", ephemeral=True)
-
-# =========================================================
-# BOT EVENTS
-# =========================================================
-async def setup_views():
-    bot.add_view(GameRoleView1())
-    bot.add_view(GameRoleView2())
-    bot.add_view(RegisterView())
-
-
-@bot.event
-async def on_ready():
-    init_db()
-    await setup_views()
-
-    print(f"BOT DISCORD'A BAĞLANDI: {bot.user}")
-    print("Bulunduğu sunucular:")
-    for g in bot.guilds:
-        print(f"- {g.name} | ID: {g.id}")
-
-    try:
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"Slash komut sayısı: {len(synced)}")
-    except Exception as e:
-        print("Sync hatası:", e)
-
-
-@bot.event
-async def on_member_join(member: discord.Member):
-    if is_owner_or_co_owner(member):
-        return
-
-    kayitsiz_role = find_role(member.guild, "❌ Kayıtsız")
-    if kayitsiz_role:
-        try:
-            await member.add_roles(kayitsiz_role, reason="Yeni üye kayıtsız rolü")
-        except Exception:
+            await interaction.followup.send(
+                f"Kurulum hatası: {e}",
+                ephemeral=True
+            )
+        except:
             pass
 
     channel = find_text_channel(member.guild, "👋・hos-geldin") or find_text_channel(member.guild, "hos-geldin")
@@ -1137,24 +910,11 @@ async def kur(interaction: discord.Interaction):
             )
             await kayit.send(embed=embed, view=RegisterView())
 
-                await interaction.followup.send(
-            "✅ Zental kurulumu tamamlandı. Sana ve yönetici arkadaşına otomatik rol verilmedi; rolleri elle ver.",
-            ephemeral=True
-        )
+        await interaction.followup.send("✅ Zental kurulumu tamamlandı. Sana ve yönetici arkadaşına otomatik rol verilmedi; rolleri elle ver.", ephemeral=True)
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-        try:
-            await interaction.followup.send(
-                f"Kurulum hatası: {e}",
-                ephemeral=True
-            )
-        except:
-            pass
-
-        print(f"/kur hatası: {e}")
+        await interaction.followup.send(f"Kurulum hatası: {e}", ephemeral=True)
+        print("/kur hatası:", e)
 
 # =========================================================
 # KURALLAR METNİ
