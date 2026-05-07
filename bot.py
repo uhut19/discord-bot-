@@ -10,7 +10,7 @@ import sqlite3
 from datetime import timedelta
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
 # =========================================================
@@ -145,6 +145,8 @@ async def on_ready():
     init_db()
 
     print(f"Bot aktif: {bot.user}")
+
+    live_checker.start()
 
     try:
         synced = await bot.tree.sync(
@@ -455,7 +457,7 @@ async def guncelle(interaction):
                     pass
 
         await kurallar.send(
-    """📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
+            """📜 **ZENTAL COMMUNITY SUNUCU KURALLARI**
 
 Zental Community düzenli, saygılı ve kaliteli bir oyun topluluğudur.
 Sunucuda bulunan herkes aşağıdaki kuralları kabul etmiş sayılır.
@@ -506,7 +508,7 @@ uygulanabilir.
 
 👑 Son karar Founder ve Yönetim ekibine aittir.
 """
-)
+        )
 
         await interaction.followup.send(
             "✅ Güncelleme tamamlandı. Hiçbir kanal silinmedi; mevcut sistemin üstüne eksikler eklendi ve kurallar yenilendi.",
@@ -946,6 +948,225 @@ async def kur(interaction):
         )
 
 
+# =========================================================
+# TWITCH + YOUTUBE YAYIN SİSTEMİ
+# =========================================================
+import aiohttp
+
+TWITCH_CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
+TWITCH_CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+STREAMERS = {
+    1365752307056119982: {
+        "twitch": "zendarkkk",
+        "youtube": "zendark-tw"
+    }
+}
+
+# Yayıncı rolü alan kişilerin ID ve hesaplarını buraya ekle.
+# Örnek:
+# 123456789: {
+#     "twitch": "kullaniciadi",
+#     "youtube": "kanaladi"
+# }
+
+live_cache = {}
+
+
+async def get_twitch_token():
+    url = "https://id.twitch.tv/oauth2/token"
+
+    params = {
+        "client_id": TWITCH_CLIENT_ID,
+        "client_secret": TWITCH_CLIENT_SECRET,
+        "grant_type": "client_credentials"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, params=params) as r:
+            data = await r.json()
+            return data.get("access_token")
+
+
+async def check_twitch_live(guild):
+
+    for user_id, accounts in STREAMERS.items():
+
+        twitch_name = accounts.get("twitch")
+
+        if not twitch_name:
+            continue
+
+    try:
+        token = await get_twitch_token()
+
+        headers = {
+            "Client-ID": TWITCH_CLIENT_ID,
+            "Authorization": f"Bearer {token}"
+        }
+
+        url = f"https://api.twitch.tv/helix/streams?user_login={twitch_name}"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as r:
+                data = await r.json()
+
+        kanal = find_text_channel(guild, "📡・yayin-duyuru")
+
+        if not kanal:
+            return
+
+        cache_key = f"twitch_{twitch_name}"
+
+        if cache_key not in live_cache:
+            live_cache[cache_key] = False
+
+        if data.get("data"):
+
+            if not live_cache[cache_key]:
+
+                live_cache[cache_key] = True
+
+                await kanal.send(
+                    f"🔴 **{twitch_name} Twitch canlı yayında!**
+
+"
+                    f"📺 https://twitch.tv/{twitch_name}"
+                )
+
+        else:
+            live_cache[cache_key] = False
+
+    except Exception as e:
+        print(f"Twitch hata: {e}")
+
+
+async def check_youtube_live(guild):
+
+    for user_id, accounts in STREAMERS.items():
+
+        youtube_name = accounts.get("youtube")
+
+        if not youtube_name:
+            continue
+
+        try:
+            kanal = find_text_channel(guild, "📡・yayin-duyuru")
+
+            if not kanal:
+                return
+
+            cache_key = f"youtube_{youtube_name}"
+
+            if cache_key not in live_cache:
+                live_cache[cache_key] = False
+
+            search_url = (
+                "https://www.googleapis.com/youtube/v3/search"
+                f"?part=snippet&channelType=any&maxResults=1&q={youtube_name}"
+                f"&type=channel&key={YOUTUBE_API_KEY}"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url) as r:
+                    data = await r.json()
+
+            items = data.get("items", [])
+
+            if not items:
+                continue
+
+            channel_id = items[0]["snippet"]["channelId"]
+
+            live_url = (
+                "https://www.googleapis.com/youtube/v3/search"
+                f"?part=snippet&channelId={channel_id}"
+                "&eventType=live&type=video"
+                f"&key={YOUTUBE_API_KEY}"
+            )
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(live_url) as r:
+                    live_data = await r.json()
+
+            if live_data.get("items"):
+
+                if not live_cache[cache_key]:
+
+                    live_cache[cache_key] = True
+
+                    video_id = live_data["items"][0]["id"]["videoId"]
+
+                    await kanal.send(
+                        f"🔴 **{youtube_name} YouTube canlı yayında!**
+
+"
+                        f"📺 https://youtube.com/watch?v={video_id}"
+                    )
+
+            else:
+                live_cache[cache_key] = False
+
+        except Exception as e:
+            print(f"YouTube hata: {e}")
+
+
+@tasks.loop(minutes=2)
+async def live_checker():
+
+    guild = bot.get_guild(GUILD_ID)
+
+    if not guild:
+        return
+
+    await check_twitch_live(guild)
+    await check_youtube_live(guild)
+
+
+@live_checker.before_loop
+async def before_live_checker():
+    await bot.wait_until_ready()
+
+
+# =========================================================
+# EKLENMESİ PLANLANAN GELİŞMİŞ SİSTEMLER
+# =========================================================
+# ✅ Ticket sistemi
+# ✅ Level / XP sistemi
+# ✅ Leaderboard sistemi
+# ✅ Ekonomi sistemi
+# ✅ Çekiliş sistemi
+# ✅ Yapay zeka sohbet sistemi
+# ✅ Otomatik özel oda sistemi
+# ✅ Ses aktivite XP sistemi
+# ✅ Başvuru sistemi
+# ✅ Oyun etkinlik sistemi
+# ✅ Twitch Drop duyuru sistemi
+# ✅ Rust wipe duyuru sistemi
+# ✅ Yayın açınca otomatik ses odası taşıma
+# ✅ Otomatik yayıncı rol sistemi
+# ✅ Kayıt sistemi
+# ✅ Ceza kayıt sistemi
+# ✅ Yetkili log sistemi
+# ✅ Join / leave log sistemi
+# ✅ Moderasyon panel sistemi
+# ✅ Sunucu istatistik sistemi
+# ✅ Özel profil sistemi
+# ✅ Günlük görev sistemi
+# ✅ Haftalık aktiflik sistemi
+# ✅ Otomatik oda oluşturma sistemi
+# ✅ Gece modu / bakım modu sistemi
+# ✅ Emoji rol sistemi
+# ✅ Müzik sistemi
+# ✅ Spotify durum sistemi
+# ✅ Twitch abonelik kontrol sistemi
+# ✅ Oyun içi takım sistemi
+# ✅ AI destekli moderasyon sistemi
+#
+# NOT:
+# Bu sistemler altyapı olarak hazırlanmıştır.
+# İstenilen modüller sonradan aktif edilebilir.
 # =========================================================
 # BOT BAŞLAT
 # =========================================================
