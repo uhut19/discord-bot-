@@ -857,13 +857,47 @@ async def kur(interaction: discord.Interaction):
 
         await interaction.followup.send("Kurulum başladı. Eski roller siliniyor, yeni sistem kuruluyor...", ephemeral=True)
 
+        # GÜVENLİ KURULUM KANALI OLUŞTUR
+        guvenli_kategori = discord.utils.get(guild.categories, name="⚙️ ZENTAL KURULUM")
+
+        if not guvenli_kategori:
+            guvenli_kategori = await guild.create_category(
+                name="⚙️ ZENTAL KURULUM",
+                reason="Zental güvenli kurulum sistemi"
+            )
+
+        guvenli_kanal = discord.utils.get(guild.text_channels, name="🛠️・kurulum-log")
+
+        if not guvenli_kanal:
+            guvenli_kanal = await guild.create_text_channel(
+                name="🛠️・kurulum-log",
+                category=guvenli_kategori,
+                reason="Zental güvenli kurulum sistemi"
+            )
+
+        await guvenli_kanal.send("⚙️ Zental kurulumu başladı. Sunucu sıfırlanıyor...")
+
         # TÜM KATEGORİ VE KANALLARI SİL
-        for channel in guild.channels:
+        channels_to_delete = [
+            c for c in guild.channels
+            if c.id != guvenli_kanal.id and c.id != guvenli_kategori.id
+        ]
+
+        for channel in channels_to_delete:
             try:
                 await channel.delete(reason="Zental tam sıfırlama")
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(1)
             except Exception as e:
                 print(f"Kanal silinemedi: {channel.name} | {e}")
+
+        await guvenli_kanal.send("🧹 Eski kanallar silindi. Discord cache temizleniyor...")
+        print("Kanallar silindi, Discord cache temizleniyor...")
+        await asyncio.sleep(10)
+
+        try:
+            await guvenli_kanal.send("🚀 Yeni Zental sistemi kuruluyor...")
+        except Exception:
+            pass
 
         # TÜM ROLLERİ SİL
         await delete_old_roles(guild)
