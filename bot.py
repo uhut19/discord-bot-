@@ -376,10 +376,10 @@ async def set_role_positions(guild: discord.Guild):
         try:
             await guild.edit_role_positions(positions=positions)
         except Exception as e:
-        import traceback
-        traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
-        print(f"/kur hatası: {e}")
+            print(f"/kur hatası: {e}")
 
         try:
             await interaction.followup.send(
