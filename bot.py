@@ -857,8 +857,26 @@ async def kur(interaction: discord.Interaction):
 
         await interaction.followup.send("Kurulum başladı. Eski roller siliniyor, yeni sistem kuruluyor...", ephemeral=True)
 
-        # ESKİ ROLLERİ SİL
+        # TÜM KATEGORİ VE KANALLARI SİL
+        for channel in guild.channels:
+            try:
+                await channel.delete(reason="Zental tam sıfırlama")
+                await asyncio.sleep(0.2)
+            except Exception as e:
+                print(f"Kanal silinemedi: {channel.name} | {e}")
+
+        # TÜM ROLLERİ SİL
         await delete_old_roles(guild)
+
+        # HERKESİN ROLLERİNİ SIFIRLA
+        for member in guild.members:
+            try:
+                roles_to_remove = [r for r in member.roles if not r.is_default()]
+                if roles_to_remove:
+                    await member.remove_roles(*roles_to_remove, reason="Zental tam sıfırlama")
+                    await asyncio.sleep(0.2)
+            except Exception as e:
+                print(f"Rol sıfırlama hatası: {member} | {e}")
 
         # PERMISSIONS
         founder_permissions = discord.Permissions.all()
