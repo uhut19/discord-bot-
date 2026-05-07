@@ -1137,19 +1137,24 @@ async def kur(interaction: discord.Interaction):
             )
             await kayit.send(embed=embed, view=RegisterView())
 
-        await interaction.followup.send(
-    "✅ Zental kurulumu tamamlandı. Sana ve yönetici arkadaşına otomatik rol verilmedi; rolleri elle ver.",
-    ephemeral=True
-)
+                await interaction.followup.send(
+            "✅ Zental kurulumu tamamlandı. Sana ve yönetici arkadaşına otomatik rol verilmedi; rolleri elle ver.",
+            ephemeral=True
+        )
 
-except Exception as e:
-    import traceback
-    traceback.print_exc()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
 
-    await interaction.followup.send(
-        f"Kurulum hatası: {e}",
-        ephemeral=True
-    )
+        try:
+            await interaction.followup.send(
+                f"Kurulum hatası: {e}",
+                ephemeral=True
+            )
+        except:
+            pass
+
+        print(f"/kur hatası: {e}")
 
 # =========================================================
 # KURALLAR METNİ
